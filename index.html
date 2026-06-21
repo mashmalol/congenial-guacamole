@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Drone FPV Frame · Digital Rain</title>
+    <style>
+        /* 全局重置 & 字体 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0b0e14;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', 'Poppins', system-ui, -apple-system, sans-serif;
+            padding: 1.5rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* ----- 数字雨 Canvas (背景层) ----- */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            /* 让鼠标事件穿透，不干扰按钮点击 */;
+        }
+
+        /* ----- 主卡片 (浮动在数字雨之上) ----- */
+        .product-card {
+            position: relative;
+            z-index: 10;
+            max-width: 720px;
+            width: 100%;
+            background: rgba(10, 14, 23, 0.72);
+            backdrop-filter: blur(10px) saturate(1.2);
+            -webkit-backdrop-filter: blur(10px) saturate(1.2);
+            border: 1px solid rgba(0, 255, 200, 0.20);
+            border-radius: 2.5rem;
+            padding: 2.8rem 2.5rem 3rem;
+            box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 255, 200, 0.08) inset;
+            transition: box-shadow 0.3s ease;
+            text-align: center;
+        }
+
+        .product-card:hover {
+            box-shadow: 0 40px 80px -20px rgba(0, 200, 255, 0.25), 0 0 0 1px rgba(0, 255, 200, 0.25) inset;
+        }
+
+        /* 项目徽标 / 小标签 */
+        .badge {
+            display: inline-block;
+            background: rgba(0, 255, 200, 0.10);
+            border: 1px solid rgba(0, 255, 200, 0.25);
+            border-radius: 100px;
+            padding: 0.3rem 1.2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #7effe0;
+            margin-bottom: 1.2rem;
+            backdrop-filter: blur(4px);
+        }
+
+        /* 标题 */
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #f0fcff;
+            text-shadow: 0 0 20px rgba(0, 255, 200, 0.15);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
+        }
+
+        .sub-title {
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: #b2d9e8;
+            opacity: 0.9;
+            margin-bottom: 1.8rem;
+            border-bottom: 1px dashed rgba(0, 255, 200, 0.15);
+            padding-bottom: 1.5rem;
+        }
+
+        /* 描述 */
+        .description {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #d4e9f5;
+            background: rgba(0, 20, 30, 0.30);
+            padding: 1.5rem 1.8rem;
+            border-radius: 1.8rem;
+            border-left: 3px solid #2affd0;
+            text-align: left;
+            margin-bottom: 2.2rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .description strong {
+            color: #a6fff0;
+            font-weight: 600;
+        }
+
+        .description .highlight {
+            color: #ffd966;
+        }
+
+        /* 特性标签 (迷你徽章) */
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 0.8rem;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .feature-tags span {
+            background: rgba(0, 255, 200, 0.06);
+            border: 1px solid rgba(0, 255, 200, 0.12);
+            border-radius: 40px;
+            padding: 0.3rem 1.2rem;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #b7e9ff;
+            letter-spacing: 0.02em;
+            backdrop-filter: blur(2px);
+        }
+
+        /* ----- 购买按钮 (发光边框) ----- */
+        .buy-wrapper {
+            margin-top: 0.6rem;
+        }
+
+        .buy-button {
+            display: inline-block;
+            background: #0f1a1e;
+            color: #f0fcff;
+            font-size: 1.3rem;
+            font-weight: 600;
+            padding: 1rem 3.2rem;
+            border-radius: 80px;
+            text-decoration: none;
+            letter-spacing: 0.03em;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.25s ease;
+            box-shadow: 0 0 0 2px rgba(0, 255, 200, 0.15);
+
+            /* 发光边框 —— 用伪元素实现动态光晕 */
+            background-clip: padding-box;
+        }
+
+        /* 按钮主样式 + 发光边框 (渐变边框) */
+        .buy-button::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 80px;
+            padding: 3px;
+            background: conic-gradient(from 0deg,
+                    #00ffc3,
+                    #00a6ff,
+                    #a855f7,
+                    #00ffc3,
+                    #00a6ff,
+                    #a855f7,
+                    #00ffc3);
+            background-size: 300% 300%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderRotate 5s linear infinite;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        /* 按钮内部光晕 (额外发光层) */
+        .buy-button::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 80px;
+            background: radial-gradient(circle at 30% 40%, rgba(0, 255, 200, 0.25), transparent 70%);
+            filter: blur(8px);
+            opacity: 0.3;
+            transition: opacity 0.4s ease;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .buy-button:hover::before {
+            opacity: 1;
+            animation-duration: 2s;
+        }
+
+        .buy-button:hover::after {
+            opacity: 0.8;
+            filter: blur(14px);
+        }
+
+        .buy-button:hover {
+            transform: scale(1.03) translateY(-2px);
+            box-shadow: 0 12px 40px -8px rgba(0, 255, 200, 0.30), 0 0 0 2px rgba(0, 255, 200, 0.30);
+            background: #13262e;
+            color: #ffffff;
+        }
+
+        .buy-button:active {
+            transform: scale(0.97);
+        }
+
+        /* 按钮内文字 + 小箭头 */
+        .buy-button .arrow {
+            display: inline-block;
+            margin-left: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .buy-button:hover .arrow {
+            transform: translateX(6px);
+        }
+
+        /* 按钮下方的小提示 */
+        .footnote {
+            margin-top: 1.8rem;
+            font-size: 0.8rem;
+            color: rgba(180, 210, 230, 0.5);
+            letter-spacing: 0.04em;
+        }
+
+        .footnote a {
+            color: rgba(0, 255, 200, 0.5);
+            text-decoration: none;
+            border-bottom: 1px dotted rgba(0, 255, 200, 0.2);
+        }
+
+        /* ----- 动画 ----- */
+        @keyframes borderRotate {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 550px) {
+            .product-card {
+                padding: 2rem 1.2rem 2.2rem;
+                border-radius: 2rem;
+            }
+            h1 {
+                font-size: 2.1rem;
+            }
+            .description {
+                padding: 1.2rem 1.2rem;
+                font-size: 0.95rem;
+            }
+            .buy-button {
+                font-size: 1.05rem;
+                padding: 0.8rem 2.2rem;
+                width: 100%;
+            }
+            .buy-button::before {
+                inset: -3px;
+            }
+            .feature-tags span {
+                font-size: 0.7rem;
+                padding: 0.2rem 0.9rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            h1 {
+                font-size: 1.7rem;
+            }
+            .sub-title {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 数字雨 Canvas -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- 主卡片 -->
+    <main class="product-card">
+
+        <div class="badge">🚀 3D Printing · FPV</div>
+
+        <h1>Rocket Drone<br>FPV Frame</h1>
+        <div class="sub-title">Rocket Style · Speed &amp; Personality</div>
+
+        <div class="description">
+            <strong>🔥 Unique Rocket-Styled FPV Drone Frame</strong><br>
+            Designed for speed, style, and easy 3D printing. The aerodynamic body protects electronics
+            while delivering a striking rocket silhouette in the air.<br>
+            <span class="highlight">✅ Lightweight · Modular · Quick Assembly</span><br>
+            Compatible with FPV cameras and mainstream flight controllers. Recommended materials:
+            <strong>PLA+ / PETG / ABS</strong>.
+        </div>
+
+        <!-- 特性标签 -->
+        <div class="feature-tags">
+            <span>⚡ Aerodynamic</span>
+            <span>🖨️ All 3D Printed</span>
+            <span>🧩 Modular Parts</span>
+            <span>📷 FPV Camera Mount</span>
+            <span>📐 0.2 mm Layer Height</span>
+        </div>
+
+        <!-- 购买按钮 (发光边框 + 链接) -->
+        <div class="buy-wrapper">
+            <a href="https://cults3d.com/:4570733" target="_blank" rel="noopener noreferrer" class="buy-button">
+                <span>🛒 Buy Now</span>
+                <span class="arrow">→</span>
+            </a>
+        </div>
+
+        <div class="footnote">
+            <span>🔗 </span>
+            <a href="https://github.com/mashmalol/congenial-guacamole" target="_blank" rel="noopener noreferrer">
+                GitHub Project Page
+            </a>
+            <span style="margin:0 8px;opacity:0.3;">·</span>
+            <span>STL + blend files included</span>
+        </div>
+
+    </main>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ----- 数字雨 —— Matrix Rain 效果 -----
+            const canvas = document.getElementById('matrix-canvas');
+            const ctx = canvas.getContext('2d');
+
+            let width, height;
+            let columns = [];
+            let drops = [];
+            const fontSize = 18;
+            let charSet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+            // 调整尺寸
+            function resizeCanvas() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+                // 重新计算列数
+                columns = Math.floor(width / fontSize);
+                // 重置雨滴位置 (保持视觉连贯)
+                drops = [];
+                for (let i = 0; i < columns; i++) {
+                    drops[i] = Math.floor(Math.random() * -100); // 错开起始位置
+                }
+            }
+
+            // 初始化
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // 绘制数字雨
+            function drawRain() {
+                // 半透明黑色叠加 (制造拖尾)
+                ctx.fillStyle = 'rgba(10, 14, 20, 0.07)';
+                ctx.fillRect(0, 0, width, height);
+
+                // 文字颜色 — 青绿色调
+                ctx.fillStyle = '#00e6c0';
+                ctx.font = fontSize + 'px "Courier New", monospace';
+                ctx.shadowColor = '#00ffc0';
+                ctx.shadowBlur = 8;
+
+                for (let i = 0; i < drops.length; i++) {
+                    // 随机字符
+                    const char = charSet.charAt(Math.floor(Math.random() * charSet.length));
+                    const x = i * fontSize + fontSize / 2;
+                    const y = drops[i] * fontSize;
+
+                    // 随机亮度微变 (前面更亮)
+                    const brightness = Math.min(1, 0.4 + (drops[i] / 60));
+                    ctx.globalAlpha = brightness * 0.9 + 0.2;
+                    ctx.fillStyle = `hsl(170, 90%, ${50 + brightness * 40}%)`;
+                    ctx.fillText(char, x, y);
+
+                    // 偶尔加一些亮点 (头部)
+                    if (drops[i] > 0 && Math.random() < 0.015) {
+                        ctx.shadowBlur = 18;
+                        ctx.fillStyle = '#b0fff0';
+                        ctx.globalAlpha = 0.9;
+                        ctx.fillText(char, x, y);
+                        ctx.shadowBlur = 8;
+                    }
+
+                    // 下落速度 (动态)
+                    drops[i] += 0.5 + Math.random() * 0.6;
+
+                    // 重置到底部
+                    if (drops[i] * fontSize > height + 50) {
+                        drops[i] = -Math.random() * 30 - 10;
+                    }
+                }
+
+                // 恢复阴影
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1.0;
+
+                requestAnimationFrame(drawRain);
+            }
+
+            // 启动数字雨
+            drawRain();
+
+            // （可选）点击按钮时增加一点反馈 — 纯视觉，无干扰
+        })();
+    </script>
+
+</body>
+</html>
