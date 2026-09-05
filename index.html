@@ -1015,6 +1015,12 @@
         const canvas = document.getElementById('model-canvas');
         const stage = document.querySelector('.model-stage');
         const defaultModelUrl = './DRONEtop.stl';
+        const defaultModelPromise = fetch(defaultModelUrl).then(function(response) {
+            if (!response.ok) {
+                throw new Error('STL request failed');
+            }
+            return response.arrayBuffer();
+        });
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -1086,11 +1092,7 @@
 
         async function loadDefaultModel() {
             try {
-                const response = await fetch(defaultModelUrl);
-                if (!response.ok) {
-                    throw new Error('STL request failed');
-                }
-                displayModel(await response.arrayBuffer());
+                displayModel(await defaultModelPromise);
             } catch (error) {
                 console.error(error);
             }
