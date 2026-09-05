@@ -335,6 +335,16 @@
             color: #3a1609;
         }
 
+        .model-fab {
+            bottom: 14.1rem;
+            border-color: rgba(119, 188, 255, 0.65);
+        }
+
+        .model-fab .guide-fab-icon {
+            background: #77bcff;
+            color: #09223a;
+        }
+
         .guide-fab:focus-visible,
         .guide-close:focus-visible {
             outline: 2px solid #ffd966;
@@ -444,6 +454,25 @@
             line-height: 1.55;
         }
 
+        .model-panel {
+            width: min(900px, 100%);
+        }
+
+        .model-stage {
+            position: relative;
+            min-height: 420px;
+            overflow: hidden;
+            border: 1px solid rgba(119, 188, 255, 0.25);
+            border-radius: 1rem;
+            background: radial-gradient(circle at 50% 42%, rgba(0, 120, 150, 0.22), rgba(3, 10, 17, 0.96) 68%);
+        }
+
+        .model-canvas {
+            display: block;
+            width: 100%;
+            height: 420px;
+        }
+
         /* ----- 动画 ----- */
         @keyframes borderRotate {
             0% {
@@ -491,6 +520,9 @@
             }
             .tuning-fab {
                 bottom: 8.8rem;
+            }
+            .model-fab {
+                bottom: 12.7rem;
             }
             .guide-fab-label {
                 display: none;
@@ -582,6 +614,11 @@
     <button class="guide-fab tuning-fab" id="tuning-open" type="button" aria-haspopup="dialog" aria-controls="software-tuning">
         <span class="guide-fab-icon" aria-hidden="true">⌁</span>
         <span class="guide-fab-label">Software Tuning</span>
+    </button>
+
+    <button class="guide-fab model-fab" id="model-open" type="button" aria-haspopup="dialog" aria-controls="stl-viewer">
+        <span class="guide-fab-icon" aria-hidden="true">3D</span>
+        <span class="guide-fab-label">View STL</span>
     </button>
 
     <div class="guide-modal" id="build-guide" role="dialog" aria-modal="true" aria-labelledby="guide-title" hidden>
@@ -776,6 +813,16 @@
         </section>
     </div>
 
+    <div class="guide-modal" id="stl-viewer" role="dialog" aria-modal="true" aria-label="3D STL model viewer" hidden>
+        <section class="guide-panel model-panel">
+            <button class="guide-close" id="model-close" type="button" aria-label="Close 3D model viewer">×</button>
+
+            <div class="model-stage">
+                <canvas class="model-canvas" id="model-canvas"></canvas>
+            </div>
+        </section>
+    </div>
+
     <script>
         (function() {
             'use strict';
@@ -870,6 +917,9 @@
             const tuningModal = document.getElementById('software-tuning');
             const tuningOpen = document.getElementById('tuning-open');
             const tuningClose = document.getElementById('tuning-close');
+            const modelModal = document.getElementById('stl-viewer');
+            const modelOpen = document.getElementById('model-open');
+            const modelClose = document.getElementById('model-close');
 
             function closeGuide() {
                 guideModal.hidden = true;
@@ -916,6 +966,22 @@
                     closeTuning();
                 }
             });
+            function closeModel() {
+                modelModal.hidden = true;
+                modelOpen.focus();
+            }
+
+            modelOpen.addEventListener('click', function() {
+                modelModal.hidden = false;
+                modelClose.focus();
+                window.dispatchEvent(new Event('stl-viewer-open'));
+            });
+            modelClose.addEventListener('click', closeModel);
+            modelModal.addEventListener('click', function(event) {
+                if (event.target === modelModal) {
+                    closeModel();
+                }
+            });
             document.addEventListener('keydown', function(event) {
                 if (event.key !== 'Escape') {
                     return;
@@ -926,9 +992,120 @@
                     closeSpecs();
                 } else if (!tuningModal.hidden) {
                     closeTuning();
+                } else if (!modelModal.hidden) {
+                    closeModel();
                 }
             });
         })();
+    </script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+        import { STLLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/STLLoader.js';
+
+        const canvas = document.getElementById('model-canvas');
+        const stage = document.querySelector('.model-stage');
+        const defaultModelUrl = './DRONEtop.stl';
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        const controls = new OrbitControls(camera, canvas);
+        const loader = new STLLoader();
+        let model;
+        let viewerReady = false;
+
+        scene.add(new THREE.AmbientLight(0xc5f5ff, 1.6));
+        const keyLight = new THREE.DirectionalLight(0x8de9ff, 3.2);
+        keyLight.position.set(3, 5, 4);
+        scene.add(keyLight);
+        const fillLight = new THREE.DirectionalLight(0xffc88a, 1.4);
+        fillLight.position.set(-4, 2, -3);
+        scene.add(fillLight);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.07;
+        controls.addEventListener('change', render);
+
+        function resizeViewer() {
+            const width = stage.clientWidth;
+            const height = 420;
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(width, height, false);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            render();
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+        }
+
+        function frameModel(geometry) {
+            geometry.computeBoundingBox();
+            const center = geometry.boundingBox.getCenter(new THREE.Vector3());
+            geometry.translate(-center.x, -center.y, -center.z);
+            const size = geometry.boundingBox.getSize(new THREE.Vector3());
+            const largestSide = Math.max(size.x, size.y, size.z);
+            const scale = 3.4 / largestSide;
+            geometry.scale(scale, scale, scale);
+            camera.position.set(0, 1.8, 5.5);
+            controls.target.set(0, 0, 0);
+            controls.minDistance = 1.5;
+            controls.maxDistance = 16;
+            controls.update();
+        }
+
+        function displayModel(arrayBuffer) {
+            try {
+                const geometry = loader.parse(arrayBuffer);
+                geometry.computeVertexNormals();
+                if (model) {
+                    scene.remove(model);
+                    model.geometry.dispose();
+                    model.material.dispose();
+                }
+                model = new THREE.Mesh(
+                    geometry,
+                    new THREE.MeshStandardMaterial({ color: 0x44e0bd, metalness: 0.35, roughness: 0.32 })
+                );
+                frameModel(geometry);
+                scene.add(model);
+                render();
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function loadDefaultModel() {
+            try {
+                const response = await fetch(defaultModelUrl);
+                if (!response.ok) {
+                    throw new Error('STL request failed');
+                }
+                displayModel(await response.arrayBuffer());
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        window.addEventListener('stl-viewer-open', function() {
+            if (!viewerReady) {
+                resizeViewer();
+                viewerReady = true;
+                loadDefaultModel();
+            } else {
+                resizeViewer();
+            }
+        });
+        window.addEventListener('resize', resizeViewer);
     </script>
 
 </body>
