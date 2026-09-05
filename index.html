@@ -454,23 +454,37 @@
             line-height: 1.55;
         }
 
+        .model-modal {
+            padding: 0;
+        }
+
         .model-panel {
-            width: min(900px, 100%);
+            width: 100vw;
+            height: 100vh;
+            max-height: none;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            overflow: hidden;
         }
 
         .model-stage {
             position: relative;
-            min-height: 420px;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
             overflow: hidden;
-            border: 1px solid rgba(119, 188, 255, 0.25);
-            border-radius: 1rem;
+            border: 0;
+            border-radius: 0;
             background: radial-gradient(circle at 50% 42%, rgba(0, 120, 150, 0.22), rgba(3, 10, 17, 0.96) 68%);
         }
 
         .model-canvas {
             display: block;
             width: 100%;
-            height: 420px;
+            height: 100%;
         }
 
         /* ----- 动画 ----- */
@@ -813,7 +827,7 @@
         </section>
     </div>
 
-    <div class="guide-modal" id="stl-viewer" role="dialog" aria-modal="true" aria-label="3D STL model viewer" hidden>
+    <div class="guide-modal model-modal" id="stl-viewer" role="dialog" aria-modal="true" aria-label="3D STL model viewer" hidden>
         <section class="guide-panel model-panel">
             <button class="guide-close" id="model-close" type="button" aria-label="Close 3D model viewer">×</button>
 
@@ -1042,7 +1056,7 @@
 
         function resizeViewer() {
             const width = stage.clientWidth;
-            const height = 420;
+            const height = stage.clientHeight || window.innerHeight;
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(width, height, false);
             camera.aspect = width / height;
