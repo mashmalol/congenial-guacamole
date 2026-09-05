@@ -503,6 +503,28 @@
             overflow: hidden;
         }
 
+        .model-panel .guide-close {
+            z-index: 2;
+            display: inline-flex;
+            width: auto;
+            height: auto;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.7rem 1rem;
+            border-radius: 999px;
+            background: rgba(8, 24, 30, 0.9);
+            color: #effffc;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 18px rgba(0, 255, 195, 0.16);
+        }
+
+        .model-panel .guide-close:hover {
+            background: #16343a;
+            border-color: rgba(126, 255, 224, 0.65);
+        }
+
         .model-stage {
             position: relative;
             width: 100%;
@@ -862,7 +884,7 @@
 
     <div class="guide-modal model-modal" id="stl-viewer" role="dialog" aria-modal="true" aria-label="3D STL model viewer" hidden>
         <section class="guide-panel model-panel">
-            <button class="guide-close" id="model-close" type="button" aria-label="Close 3D model viewer">×</button>
+            <button class="guide-close" id="model-close" type="button" aria-label="Exit 3D model viewer">× <span>Exit</span></button>
 
             <div class="model-stage">
                 <canvas class="model-canvas" id="model-canvas"></canvas>
